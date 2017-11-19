@@ -18,7 +18,7 @@ pd.set_option('expand_frame_repr', False)
 
 
 # 首先要获取不同EMV参数下的资金曲线，通过运行EMV_single_test，设定参数范围，生成对应的个股数据，此处以600000为案例
-df = pd.read_hdf('C:/all_trading_data/data/output_data/EMV600000.h5', key='600000')
+df = pd.read_hdf('EMV600000.h5', key='600000')
 
 # 将资金曲线转化为收益率日数据转化为月度数据
 df = df.pct_change()

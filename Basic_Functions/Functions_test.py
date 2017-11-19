@@ -15,7 +15,7 @@ pd.set_option('expand_frame_repr', False)
 
 # ====1 测试个股数据导入
 # 1.1 测试万得个股数据读取
-stock_data = Functions.import_stock_data_wande('000001.SZ')
+# stock_data = Functions.import_stock_data_wande('000001.SZ')
 # print stock_data['date']
 # exit()
 
@@ -24,10 +24,18 @@ stock_data = Functions.import_stock_data_wande('000001.SZ')
 # print stock_data
 # exit()
 
+# 1.3 测试money163个股数据读取
+stock_data = Functions.import_stock_data_money163('000001')
+# df['change'] = df['change'].astype('float')
+print stock_data
+# print df['change'].astype('float', inplace=True)
+# print df['change'].astype('float')
+exit()
+
 # 2 测试指数数据导入
 # 2.1 测试大盘数据读取 万得
 # index_code='000001.SH'
-index_data = Functions.import_index_data_wande()
+# index_data = Functions.import_index_data_wande()
 # print index_data['date']
 # exit()
 
@@ -40,15 +48,15 @@ index_data = Functions.import_index_data_wande()
 
 # ==== 3 测试计算除权股价，默认是后复权
 stock_data_adjust = Functions.cal_adjust_price(stock_data, adjust_type='adjust_forth', return_type=2)
-# print stock_data_adjust
-# exit()
+print stock_data_adjust
+exit()
 
 # ==== 4 测试从一个指定的文件夹里获得所有股票名称的列表
 # 4.1 从万得的数据读取股票列表
 # file_path = 'C:/all_trading_data/data/input_data/stock_data_wande'
 # print Functions.get_stock_code_list_in_one_dir_wande(file_path)
 # 4.2 从xbx的数据读取股票列表
-file_path = 'C:/all_trading_data/data/input_data/stock_data'
+file_path = 'D:/all_trading_data/data/input_data/stock_data'
 # print Functions.get_stock_code_list_in_one_dir_xbx(file_path)
 # exit()
 

@@ -2,26 +2,17 @@
 """
 @author: Ocean_Lane
 @contract: dazekey@163.com
-@file: Functions_v1.4_20171119.py
-@time: 2017/11/19 15:05
+@file: Functions_v1.1_20171104.py
+@time: 2017/10/22 14:38
 """
-
+# coding: utf-8
 """
-v1.4 20171118
-dui
-
-v1.3 20171110
-更新了网易财经的股票数据导入
-替换所有import stock data函数里的input_data_path参数里的路径
-
 Function modules:
 1. importing stock data 导入股票数据
     1.1 import stock data from wande source: 从万得的数据导入股票数据
         import_stock_data_wande(stock_code, input_data_path='C:/all_trading_data/data/input_data/stock_data_wande/', other_columns=[], start_date='19890101')
     1.2  import stock data from xbx source 从xbx的数据导入股票数据
         import_stock_data_xbx(stock_code, input_data_path='C:/all_trading_data/data/input_data/stock_data/', other_columns=[], start_date='19890101')
-    1.3 import stock data from money163 souurce 导入网易财经的股票数据
-
 2. importing index data 导入指数数据
     2.1 import index data from wande source 从万得的数据导入指数数据
         import_index_data_wande(index_code='000001.SH', input_data_path='C:/all_trading_data/data/input_data/index_data_wande/', start_date='19890101')
@@ -66,11 +57,10 @@ stock_dir_wande = '/stock_data_wande/'
 index_dir_wande = '/index_data_wande/'
 stock_dir_xbx = '/stock_data/'
 index_dir_xbx = '/index_data/'
-stock_dir_money163 = '/stock_data_money163/test/'
 
 # ====1 导入股票数据
 # 1.1 导入股票数据for 万得
-def import_stock_data_wande(stock_code, input_data_path=input_data_path+stock_dir_wande, other_columns=[], start_date='19890101'):
+def import_stock_data_wande(stock_code, input_data_path='C:/all_trading_data/data/input_data/stock_data_wande/', other_columns=[], start_date='19890101'):
     """
     注：该函数专门适用于万得的数据，如果数据源发生变化，请仔细检查该代码，尤其是列名和列的数字属性，需要调整
     导入在data/input_data/stock_data_wande下的股票数据。
@@ -85,8 +75,8 @@ def import_stock_data_wande(stock_code, input_data_path=input_data_path+stock_di
     df.columns = [i.encode('utf-8') for i in df.columns]
     df.fillna(0, inplace=True)  # 万得的数据很多开头为空值，所以要将空值填补为0，不然之后计算会有问题
     df.rename(columns={'日期': 'date', '代码': 'code', '开盘价(元)': 'open', '最高价(元)': 'high', '最低价(元)': 'low',
-                       '收盘价(元)': 'close', '涨跌幅(%)': 'change', '成交金额(元)': 'money', '总市值(元)': 'market_value', '成交量(股)':'volume'}, inplace=True)
-    df = df[['date', 'code', 'open', 'high', 'low', 'close', 'change', 'money', 'volume', 'market_value'] + other_columns]    #互换了下顺序，这样print的时候open在前
+                       '收盘价(元)': 'close', '涨跌幅(%)': 'change', '成交金额(元)': 'money', '总市值(元)': 'market_value'}, inplace=True)
+    df = df[['date', 'code', 'open', 'high', 'low', 'close', 'change', 'money', 'market_value'] + other_columns]    #互换了下顺序，这样print的时候open在前
     df['change'] = df['change']/100.0000  # 因为万德的涨跌幅没有除以100
     df.sort_values(by=['date'], inplace=True)
     df['date'] = pd.to_datetime(df['date'])
@@ -97,7 +87,7 @@ def import_stock_data_wande(stock_code, input_data_path=input_data_path+stock_di
     return df
 
 # 1.2 导入股票数据for xbx
-def import_stock_data_xbx(stock_code, input_data_path=input_data_path+stock_dir_xbx, other_columns=[], start_date='19890101'):
+def import_stock_data_xbx(stock_code, input_data_path='C:/all_trading_data/data/input_data/stock_data/', other_columns=[], start_date='19890101'):
     """
     注：该函数专门适用于xbx的数据，如果数据源发生变化，请仔细检查该代码，尤其是列名和列的数字属性，需要调整
     导入在data/input_data/stock_data下的股票数据。
@@ -123,48 +113,9 @@ def import_stock_data_xbx(stock_code, input_data_path=input_data_path+stock_dir_
 
     return df
 
-# 1.3 导入网易财经的股票数据
-def import_stock_data_money163(stock_code, input_data_path=input_data_path + stock_dir_money163, other_columns=[], start_date='19890101'):
-    """
-    注：该函数专门适用于xbx的数据，如果数据源发生变化，请仔细检查该代码，尤其是列名和列的数字属性，需要调整
-    导入在data/input_data/stock_data下的股票数据。
-    :param stock_code: 股票数据代码
-    :param input_data_path = 'C:/all_trading_data/data/input_data/stock_data/' xbx个股数据路径
-    :param other_columns: 默认值导入制定数据字段，可以补充输入指定字段
-        默认字段：'交易日期', '股票代码', '开盘价', '最高价', '最低价', '收盘价', '涨跌幅', '成交额', '总市值’
-    :param start_date = '19890101' 个股数据的开始时间
-    :return: 返回DataFrame的数据
-    """
-    df = pd.read_csv(input_data_path + stock_code + '.csv', encoding = 'gbk')
-    df.dropna(how='all', inplace=True)  # 删除空值的行
-    df.columns = [i.encode('utf-8') for i in df.columns]
-    df.fillna(0, inplace=True)  # 万得的数据很多开头为空值，所以要将空值填补为0，不然之后计算会有问题
-    df.rename(columns={'日期': 'date', '名称': 'name', '股票代码': 'code','开盘价': 'open', '最高价': 'high', '最低价': 'low',
-                       '收盘价': 'close', '涨跌幅': 'change', '涨跌额': 'change_amount', '换手率': 'turnover_rate', '成交量': 'volume', '成交金额': 'money', '总市值': 'market_value', '流通市值': 'outstanding_value', '交易笔数': 'transaction_num'}, inplace=True)
-    df = df[['date', 'code', 'open', 'high', 'low', 'close', 'change', 'change_amount', 'turnover_rate', 'volume',  'money', 'market_value'] + other_columns]    #互换了下顺序，这样print的时候open在前
-    # df['change'] = df['change']/100.0000  # 因为万德的涨跌幅没有除以100
-    df['code'] = df['code'].apply(lambda x: x.split('\'')[1])
-
-    df.loc[df['change'] == 'None', 'change'] = 0
-    df['change'] = df['change'].astype('float')
-    df['change'] = df['change'] / 100.00
-
-    df.loc[df['change_amount'] == 'None', 'change_amount'] = 0
-    df['change_amount'] = df['change_amount'].astype('float')
-    df['change_amount'] = df['change_amount'] / 100.00
-
-    # df['change'] = df['change'] / 100
-    df['date'] = pd.to_datetime(df['date'])
-    df.sort_values(by=['date'], inplace=True)
-    df = df[df['date'] >= pd.to_datetime(start_date)]
-    # df['股票代码'] = stock_code
-    df.reset_index(inplace=True, drop=True)
-
-    return df
-
 # ==== 2 导入指数数据
 # 2.1 导入指数数据 for 万得
-def import_index_data_wande(index_code='000001.SH', input_data_path = input_data_path + index_dir_wande, start_date='19890101'):
+def import_index_data_wande(index_code='000001.SH', input_data_path='C:/all_trading_data/data/input_data/index_data_wande/', start_date='19890101'):
     """
     注：该函数专门适用于万得的数据，如果数据源发生变化，请仔细检查该代码，尤其是列名和列的数字属性，需要调整
     导入在data/input_data/index_data下的股票数据。
@@ -189,7 +140,7 @@ def import_index_data_wande(index_code='000001.SH', input_data_path = input_data
     return df_index
 
 # 2.2 导入指数数据 for xbx
-def import_index_data_xbx(index_code='sh000001', input_data_path=input_data_path+index_dir_xbx, start_date='19890101'):
+def import_index_data_xbx(index_code='sh000001', input_data_path='C:/all_trading_data/data/input_data/index_data/', start_date='19890101'):
     """
     注：该函数专门适用于xbx的数据，如果数据源发生变化，请仔细检查该代码，尤其是列名和列的数字属性，需要调整
     导入在data/input_data/index_data下的股票数据。

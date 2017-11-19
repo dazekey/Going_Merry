@@ -2,15 +2,11 @@
 """
 @author: Ocean_Lane
 @contract: dazekey@163.com
-@file: Functions_v1.4_20171119.py
-@time: 2017/11/19 15:05
+@file: Functions_v1.3_20171110.py
+@time: 2017/11/10 8:22
 """
 
 """
-v1.4 20171118
-dui
-
-v1.3 20171110
 更新了网易财经的股票数据导入
 替换所有import stock data函数里的input_data_path参数里的路径
 
