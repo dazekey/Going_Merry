@@ -10,8 +10,7 @@ import pandas as pd
 from Basic_functions import Functions
 from Strategy_test import TA_strategy
 
-stock_data =
-pd.set_option('expand_frame_repr', False)
+stock_data = pd.set_option('expand_frame_repr', False)
 
 data = pd.read_hdf('EMV600000.h5')
 data.to_csv('EMV600000.csv')

@@ -257,7 +257,7 @@ def cal_adjust_price(input_stock_data, adjust_type='adjust_back', return_type=2)
 
 # ==== 4 获得指定路径下 所有股票的代码，形成一个List返回
 # 4.1 获得万得的股票代码列表
-def get_stock_code_list_in_one_dir_wande(input_data_path='C:/all_trading_data/data/input_data/stock_data_wande/'):
+def get_stock_code_list_in_one_dir_wande(input_data_path='D:/all_trading_data/data/input_data/stock_data_wande/'):
     """
     指定文件夹下找到所有股票代码
     :param path: 指定文件夹路径
