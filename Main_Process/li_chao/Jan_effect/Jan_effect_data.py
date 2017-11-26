@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 
 import pandas as pd
-import Functions
+from Basic_Functions import Functions
 import time
 
 pd.set_option('expand_frame_repr', False)
