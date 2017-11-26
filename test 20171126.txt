@@ -1,1 +1,6 @@
-made some commit to ocean's branch
+<<<<<<< HEAD
+ken
+Ocean
+=======
+ken and ocean
+>>>>>>> refs/remotes/origin/Ken
