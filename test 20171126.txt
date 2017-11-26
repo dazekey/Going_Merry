@@ -1,1 +1,6 @@
+<<<<<<< HEAD
 ken and ocean
+=======
+ken
+Ocean
+>>>>>>> refs/remotes/origin/Ocean
