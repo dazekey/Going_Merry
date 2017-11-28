@@ -1,20 +1,29 @@
 # encoding: utf-8
 
 """
-ma_short大于ma_long时，买入，信号为1；当ma_short小于ma_long时，卖出，信号为 0
-计算所有股票使用此策略时的收益情况（参数可以设定一个范围或者设为确定值，当参数为范围时，取的为excessive_rtn最大的数据行）
+@author: Ken
+@file: ma_test_for_allstock.py
+@time: 2017/11/28 15:22
+
+ma_short大于ma_long时，买入，信号为1；当ma_short小于ma_long时，卖出，信号为0
+计算所有股票使用此策略在不同参数下的年化收益率，sharpe ratio, max drawdown
+benchmark: 个股在同一期间内的年化收益率，sharpe ratio, max drawdown
 
 """
 
+from __future__ import division  # 不引入这个的话，除法结果小于1的都是0
 import os
 import warnings
+import time
 import pandas as pd
 from Basic_Functions import Functions
+from Basic_Functions import Data_standardize
 from Strategy_test import TA_strategy
 from Performance_analysis import pf_analysis
 from Performance_analysis import equity_cal
+from math import sqrt
 
-warnings.filterwarnings("ignore")
+# warnings.filterwarnings("ignore")
 pd.set_option('expand_frame_repr', False)
 
 
@@ -25,7 +34,6 @@ def sharp_ratio(df, rf=0.0284):
     :return: 输出夏普比率
     """
 
-    from math import sqrt
     # 将数据序列合并为一个dataframe并按日期排序
     df = df.copy()
     rng = pd.period_range(df['date'].iloc[0], df['date'].iloc[-1], freq='D')
@@ -46,22 +54,17 @@ index_data = Functions.import_index_data_wande()
 
 # 遍历数据文件夹中所有股票文件的文件名，得到股票代码列表
 stock_code_list = Functions.get_stock_code_list_in_one_dir_wande(input_data_path='d:/all_trading_data/data/input_data/stock_data_wande/')
-# print len(stock_code_list)
-# exit()
 
 # ====数据准备
-
-for code in stock_code_list[0:2]:    # 可以适当少选一点股票
+program_start_time = time.time()
+for code in stock_code_list[0:]:    # 可以适当少选一点股票
     stock_data = Functions.import_stock_data_wande(code)
-
+    start_time = time.time()
     if len(stock_data) < 250:    # 剔除发行时间小于约1年的数据
         continue
     print 'The progress is in %.2f%%.' % (stock_code_list.index(code) * 1.0 / len(stock_code_list) * 100)
-    stock_data = Functions.cal_adjust_price(stock_data, adjust_type='adjust_back', return_type=1)
-    # 和index合并
-    stock_data = Functions.merge_with_index_data(stock_data, index_data)
-    stock_data = stock_data[['date', 'code', 'open', 'high', 'low', 'close', 'change', 'volume', 'open_adjust_back',
-                             'high_adjust_back', 'low_adjust_back', 'close_adjust_back']]
+    stock_data = Data_standardize.data_standardize_wande(df=stock_data, index_code='000001.SH',
+                                                         adjust_type='adjust_back', return_type=1)
 
     # re = pd.DataFrame()
 
@@ -80,21 +83,22 @@ for code in stock_code_list[0:2]:    # 可以适当少选一点股票
         df = Functions.cross_both(df, 'ma_short', 'ma_long')
         df = equity_cal.position(df)
         df = equity_cal.equity_curve_complete(df)
-        df = df[['date', 'code', 'open', 'high', 'low', 'close', 'change', 'volume', 'equity']]
         df['capital_rtn'] = df['equity'].pct_change(1)
         df.ix[0, 'capital_rtn'] = 0
-        df['capital'] = (df['capital_rtn'] + 1).cumprod()
+        df['capital'] = df['equity']
 
         df_stock = stock_data.copy()
+        stock_data = stock_data[stock_data['date'] >= pd.to_datetime('2005-01-01')]
+        stock_data.reset_index(inplace=True, drop=True)
         # 股票的年化收益
         rng_stock = pd.period_range(df_stock['date'].iloc[0], df_stock['date'].iloc[-1], freq='D')
-        stock_rtn = pow(df_stock.ix[len(df_stock.index) - 1, 'close'] / df_stock.ix[0, 'close'],
+        stock_rtn = pow(df_stock.ix[len(df_stock.index) - 1, 'close_adjust_back'] / df_stock.ix[0, 'close_adjust_back'],
                         250.00 / len(rng_stock)) - 1
         # 股票最大回撤
-        df_stock['max2here_stock'] = pd.expanding_max(df_stock['close'])  # 计算当日之前的账户最大价值
-        df_stock['dd2here_stock'] = df_stock['close'] / df_stock['max2here_stock'] - 1  # 计算当日的回撤
-        temp = df_stock.sort_values(by='dd2here_stock').iloc[0][['date', 'dd2here_stock']]
-        stock_md = temp['dd2here_stock']
+        df_stock['max2here_stock'] = df_stock['close_adjust_back'].expanding(min_periods=1).max()  # 计算当日之前的股价最大价值
+        df_stock['dd2here_stock'] = df_stock['close_adjust_back'] / df_stock['max2here_stock'] - 1  # 计算当日的回撤
+        stock_temp = df_stock.sort_values(by='dd2here_stock').iloc[0][['date', 'dd2here_stock']]
+        stock_md = stock_temp['dd2here_stock']
 
         # 股票的sharpe ratio
         df_stock['pf_rtn'] = df_stock['change']
@@ -107,7 +111,7 @@ for code in stock_code_list[0:2]:    # 可以适当少选一点股票
         strategy_rtn = pow(df.ix[len(df.index) - 1, 'equity'] / df.ix[0, 'equity'], 250.00 / len(rng_strategy)) - 1
 
         # 策略最大回撤
-        df['max2here'] = pd.expanding_max(df['capital'])  # 计算当日之前的账户最大价值
+        df['max2here'] = df['capital'].expanding(min_periods=1).max()  # 计算当日之前的账户最大价值
         df['dd2here'] = df['capital'] / df['max2here'] - 1  # 计算当日的回撤
         temp = df.sort_values(by='dd2here').iloc[0][['date', 'dd2here']]
         strategy_md = temp['dd2here']
@@ -127,12 +131,19 @@ for code in stock_code_list[0:2]:    # 可以适当少选一点股票
         re.loc[i, 'strategy_md' + '_' + str(p) + '_' + str(q)] = strategy_md
         re.loc[i, 'excessive_rtn' + '_' + str(p) + '_' + str(q)] = strategy_rtn - stock_rtn
 
-        # i += 1
+    end_time = time.time()
+    cost_time =end_time - start_time
+    print 'cost time: ' + str(cost_time)
 
-
+    # print re
+# exit()
 # re.sort_values(by='excessive_rtn', ascending=False, inplace=True)
 
-    re.iloc[0:1, :].to_csv('d:/all_trading_data/data/output_data/ma_test_for_allstock_20171124.csv', header=None, mode='a', index=False)
+    re.iloc[0:1, :].to_csv('d:/all_trading_data/data/output_data/ma_test_for_allstock_20171128.csv', header=None, mode='a', index=False)
+
+program_end_time = time.time()
+program_cost_time = program_end_time - program_start_time
+print 'program cost time: ' + str(program_cost_time)
 
 
 
