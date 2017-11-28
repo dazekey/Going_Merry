@@ -7,18 +7,22 @@
 import os
 import warnings
 import pandas as pd
+import ma_test_for_single_stock
 from Basic_Functions import Functions
 from Strategy_test import TA_strategy
 from Performance_analysis import pf_analysis
 from Performance_analysis import equity_cal
 import matplotlib.pyplot as plt
 
-warnings.filterwarnings("ignore")
+# warnings.filterwarnings("ignore")
 pd.set_option('expand_frame_repr', False)
 
-
+df = ma_test_for_single_stock.ma_single_test(code='000001.SZ', start_date='20050101')
+# print df
+# exit()
+# df.to_hdf('d:/all_trading_data/data/output_data/MA_000001.h5', key='000001.SZ', mode='w')
 # 首先要获取不同MA参数下的资金曲线，通过运行MA_single_test，设定参数范围，生成对应的个股数据，此处以600000为案例
-df = pd.read_hdf('d:/all_trading_data/data/output_data/MA_600000.h5', key='600000')
+# df = pd.read_hdf('d:/all_trading_data/data/output_data/MA_000001.h5', key='000001.SZ')
 
 # 将资金曲线转化为收益率日数据转化为月度数据
 df = df.pct_change()
@@ -74,13 +78,13 @@ def momentum_ma(period_df, start_date, end_date, window=3):
 result = momentum_ma(monthly_df, '2005-1-31', '2017-9-30', 3)
 result.set_index('date', inplace=True)
 result = pd.concat([result, df_benchmark['benchmark']], axis=1, join='inner')
-result['ma_equity'] = (result['change'] + 1.00).cumprod()
+result['momentum_ma_equity'] = (result['change'] + 1.00).cumprod()
 result['benchmark_equity'] = (result['benchmark'] + 1.00).cumprod()
 print result
 
 
 fig = plt.figure(figsize=(16, 5))
-plt.plot(result['ma_equity'], label='ma_equity')
+plt.plot(result['momentum_ma_equity'], label='momentum_ma_equity')
 plt.plot(result['benchmark_equity'], label='benchmark_equity')
 plt.legend(loc='best')
 plt.show()

@@ -1,8 +1,13 @@
 # -*- encoding: utf-8 -*-
 
 """
-计算所有股票在观察期内，使用MA指标不同参数的情况下的收益情况，计算各类参数下收益率排名前5%的股票的平均收益率，
-取平均收益最高的那组的参数作为下个策略使用期EMV指标使用的参数，进而计算以上策略下的综合收益，与index作为benchmark的收益率进行比较。
+@author: Ken
+@file: momentum_ma_test_for_allstock.py
+@time: 2017/11/28 15:18
+
+计算所有股票在观察期内，使用不同参数计算的MA指标下的月度累计收益情况，对不同参数下收益率排名前5%的股票的平均收益率进行排名
+取平均收益率最高的那组参数作为下个策略使用期的参数，股票取收益率排名前5%的，进而计算该参数对应的股票池在下个持有期的收益率，画出收益率曲线
+benchmark： index(000001.SH)的收益率曲线
 """
 from __future__ import division
 import os
@@ -17,24 +22,27 @@ from Performance_analysis import pf_analysis
 from Performance_analysis import equity_cal
 import matplotlib.pyplot as plt
 
-warnings.filterwarnings("ignore")
+# warnings.filterwarnings("ignore")
 pd.set_option('expand_frame_repr', False)
 # df_stock = pd.read_hdf('d:/all_trading_data/data/output_data/momentum_emv_allstock_data.h5', key='all_stock')
-df_stock = pd.read_hdf('d:/all_trading_data/data/output_data/momentum_ma_allstock_data_20171124.h5', key='all_stock')
+df_stock = pd.read_hdf('d:/all_trading_data/data/output_data/momentum_ma_for_allstock_data_20171128.h5', key='all_stock')
+# print df_stock
+# exit()
 
 
 def momentum_and_ma(all_stock, start_date='2004-12-31', end_date='2017-9-30', window=3):
-    index_data = pd.read_csv('d:/all_trading_data/data/input_data/index_data_wande/000001.SH.CSV', parse_dates=True, encoding='gbk')
-    index_data.columns = [i.encode('utf8') for i in index_data.columns]
-    index_data.rename(columns={'代码': 'code', '日期': 'date', '涨跌幅(%)': 'change', '收盘价': 'close'}, inplace=True)
-    index_data['change'] = index_data['change'] / 100
-    index_data['date'] = pd.to_datetime(index_data['date'])
-    index_data.set_index('date', inplace=True)
 
+    index_data = Functions.import_index_data_wande(index_code='000001.SH')
+    # index_data = pd.read_csv('d:/all_trading_data/data/input_data/index_data_wande/000001.SH.CSV', parse_dates=True, encoding='gbk')
+    # index_data.columns = [i.encode('utf8') for i in index_data.columns]
+    # index_data.rename(columns={'代码': 'code', '日期': 'date', '涨跌幅(%)': 'change', '收盘价': 'close'}, inplace=True)
+    # index_data['change'] = index_data['change'] / 100
+    # index_data['date'] = pd.to_datetime(index_data['date'])
+    index_data.set_index('date', inplace=True)
     index_data.sort_index(inplace=True)
     index_data = index_data[start_date:end_date]
     # 转换成月度数据
-    by_month = index_data[['close']].resample('M').last()
+    by_month = index_data[['index_close']].resample('M').last()
     by_month.reset_index(inplace=True)
 
     momentum_portfolio_all = pd.DataFrame()
@@ -48,7 +56,7 @@ def momentum_and_ma(all_stock, start_date='2004-12-31', end_date='2017-9-30', wi
         # 取出在排名期内的数据
         stock_temp = all_stock[(all_stock['date'] > start_month) & (all_stock['date'] <= end_month)]
 
-        for (p, q) in ((5, 20), (10, 20), (20, 60), (20, 120)):
+        for (p, q) in ((5, 10), (5, 20), (5, 60), (10, 20), (10, 30), (10, 60), (20, 40), (20, 60), (20, 120)):
             # 计算每只股票在排名期的累计收益率
             grouped = stock_temp.groupby('code')['MA_' + str(p) + '_' + str(q)].agg(
                 {'return': lambda x: (x + 1).prod() - 1})
@@ -90,7 +98,7 @@ def momentum_and_ma(all_stock, start_date='2004-12-31', end_date='2017-9-30', wi
         # 将每个月的动量组合收益数据合并
         momentum_portfolio_all = momentum_portfolio_all.append(momentum_portfolio[['date', 'pf_rtn']], ignore_index=True)
         # 计算动量策略的资金曲线
-        momentum_portfolio_all['equity'] = (1 + momentum_portfolio_all['pf_rtn']).cumprod()
+    momentum_portfolio_all['equity'] = (1 + momentum_portfolio_all['pf_rtn']).cumprod()
 
     return momentum_portfolio_all
 
@@ -115,7 +123,7 @@ def sharp_ratio(df, rf=0.0284):
     volatility = df['rtn'].std() * sqrt(250)
     # 计算夏普比率
     sharpe = (annual_stock - rf) / volatility
-    print 'Sharp raio: %f' % sharpe
+    print 'Sharp ratio: %f' % sharpe
     return sharpe
 
 
@@ -131,32 +139,27 @@ sharp_ratio(me)
 
 
 # 同期大盘的相关指标
-index_data = pd.read_csv('d:/all_trading_data/data/input_data/index_data_wande/000001.SH.CSV', parse_dates=True, encoding='gbk')
-index_data.columns = [i.encode('utf8') for i in index_data.columns]
-
-index_data.rename(columns={'代码': 'code', '日期': 'date', '涨跌幅(%)': 'change', '收盘价': 'close'}, inplace=True)
-index_data['date'] = pd.to_datetime(index_data['date'])
-index_data['change'] = index_data['change'] / 100
-index_data.sort_values(by='date', inplace=True)
-index_data['equity'] = (1.0+index_data['change']).cumprod()
-index_data['pf_rtn'] = index_data['change']
-index_data = index_data[index_data['date'].isin(date_line)]
-index_data.reset_index(inplace=True)
-capital_line = list(index_data['close'])
-return_line = list(index_data['change'])
+index = Functions.import_index_data_wande(index_code='000001.SH')
+index.sort_values(by='date', inplace=True)
+index['equity'] = (1.0+index['index_change']).cumprod()
+index['pf_rtn'] = index['index_change']
+index = index[(index['date'] >= pd.to_datetime('2005-04-30')) & (index['date'] <= pd.to_datetime('2017-09-30'))]
+index.reset_index(inplace=True)
+capital_line = list(index['index_close'])
+return_line = list(index['index_change'])
 print '\n=====================同期上证指数主要回测指标====================='
-pf_analysis.annual_return(index_data)
-pf_analysis.max_drawdown(index_data)
-sharp_ratio(index_data)
+pf_analysis.annual_return(index)
+pf_analysis.max_drawdown(index)
+sharp_ratio(index)
 
-
+# 作图
 plt.figure(figsize=(14, 7))
 me.set_index('date', inplace=True)
-index_data['cum_rtn'] = (index_data['change'] + 1).cumprod() - 1
-index_data.set_index('date', inplace=True)
+index['cum_rtn'] = (index['index_change'] + 1).cumprod()
+index.set_index('date', inplace=True)
 
-(me['equity'] - 1).plot()
-index_data['cum_rtn'].plot()
-plt.title('Cumulative Return')
-plt.legend(['momentum_MA', 'index'], loc='best')
+plt.plot(me['equity'], label='momentum_ma_equity')
+plt.plot(index['cum_rtn'], label='index')
+plt.legend(loc='best')
 plt.show()
+
