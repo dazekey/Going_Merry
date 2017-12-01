@@ -1,6 +1,10 @@
 # -*- encoding: utf-8 -*-
 
 """
+@author: Ken
+@file: emv_single_test.py
+@time: 2017/11/30 11:33
+
 计算同一支股票在EMV指标参数不同情况下的收益情况
 """
 
@@ -8,31 +12,29 @@ import os
 import warnings
 import pandas as pd
 from Basic_Functions import Functions
+from Basic_Functions import Data_standardize
 from Strategy_test import TA_strategy
 from Performance_analysis import pf_analysis
 from Performance_analysis import equity_cal
 import matplotlib.pyplot as plt
 
-warnings.filterwarnings("ignore")
+# warnings.filterwarnings("ignore")
 pd.set_option('expand_frame_repr', False)
 
 # 导入指数数据,作为benchmark
 index_data = Functions.import_index_data_wande()
 
 # 此处可以填入对应的code进行单个股票测试
-stock_data = Functions.import_stock_data_wande('600000.SH', other_columns=['成交量(股)'])
-stock_data.rename(columns={'成交量(股)': 'volume'}, inplace=True)
-stock_data = Functions.cal_adjust_price(stock_data, adjust_type='adjust_back', return_type=2)
-# 和index合并
-stock_data = Functions.merge_with_index_data(stock_data, index_data)
-stock_data = stock_data[['date', 'code', 'open', 'high', 'low', 'close', 'change', 'volume']]
-
+stock_data = Functions.import_stock_data_wande('000001.SZ')
+stock_data = Data_standardize.data_standardize_wande(stock_data)
+# print stock_data
+# exit()
 
 single_stock = pd.DataFrame()
 
 for p in range(16, 21, 2):
     for q in range(20, 23):
-        df = TA_strategy.emv(stock_data, n=p, m=q)
+        df = TA_strategy.emv(stock_data, n=p, m=q, ph='high_adjust_back', pl='low_adjust_back', vol='volume')
         df = df[df['date'] >= pd.to_datetime('2005-01-01')]  # 采用2005年起的数据，写在前面可以提高计算效率
         df.reset_index(inplace=True, drop=True)  # 在计算emv之后，最早的一部分数据没有对应的值，需要重新排index
 
@@ -41,7 +43,6 @@ for p in range(16, 21, 2):
         df = Functions.cross_both(df, 'emv', 'maemv')
         df = equity_cal.position(df)
         df = equity_cal.equity_curve_complete(df)
-        # df = df[['date', 'code', 'open', 'high', 'low', 'close', 'change', 'volume', 'equity']]
         df['EMV_' + str(p) + '_' + str(q)] = df['equity']
         df.set_index(keys='date', inplace=True)
         single_stock = pd.concat([single_stock, df['EMV_' + str(p) + '_' + str(q)]], axis=1, join='outer')    # 看下merge怎么做
@@ -53,29 +54,20 @@ stock_data.set_index(keys='date', inplace=True)
 
 single_stock = pd.concat([single_stock, stock_data['benchmark']], axis=1, join='inner')
 print single_stock
-exit()
+# exit()
 # concat.to_hdf('C:/all_trading_data/data/output_data/EMV600000.h5', key='600000', mode='w')
 # df = pd.DataFrame(concat.ix['2017-9-29'])
 # print df
 # print df.sort_values(by='2017-9-29', ascending=0)
-# fig = plt.figure(figsize=(16, 5))
-# for p in range(16, 19, 2):
-#     for q in range(20, 22):
-#         plt.plot(concat['EMV_' + str(p) + '_' + str(q)], label='EMV_' + str(p) + '_' + str(q))
-#
-# plt.plot(concat['benchmark'], label='benchmark')
-# plt.legend(loc='best')
-# plt.show()
+fig = plt.figure(figsize=(16, 5))
+for p in range(16, 19, 2):
+    for q in range(20, 22):
+        plt.plot(single_stock['EMV_' + str(p) + '_' + str(q)], label='EMV_' + str(p) + '_' + str(q))
 
-# df = pd.DataFrame(concat.iloc[-1, :].T)
-#
-# df = df.astype('float64')
-# df.reset_index(inplace=True)
-# print df.dtypes
-# df = pd.DataFrame(concat.ix['2017-9-29'])
-# print df.columns
 
-# print df.sort_values(by=['2017-9-29'], ascending=1, inplace=True)
+plt.plot(single_stock['benchmark'], label='benchmark')
+plt.legend(loc='best')
+plt.show()
 exit()
 
 
