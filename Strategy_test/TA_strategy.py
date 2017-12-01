@@ -158,7 +158,7 @@ def adx(stock_data, n=14, ph='high', pl='low', pc='close'):
 
     df.dropna(inplace=True)
 
-    df['tr'] = pd.rolling_sum(df['temp'], n)
+    df['tr'] = df['temp'].rolling(window=n, center=False).sum()
 
     df.ix[(df['hd'] > 0) & (df['hd'] > df['ld']), 'hd1'] = df['hd']  # 如果hd>0并且hd>ld，则hd=hd,否则hd取0
     df['hd1'].fillna(0, inplace=True)
@@ -166,8 +166,8 @@ def adx(stock_data, n=14, ph='high', pl='low', pc='close'):
     df.ix[(df['ld'] > 0) & (df['ld'] > df['hd']), 'ld1'] = df['ld']  # 如果ld>0并且ld>hd，则ld=ld,否则ld取0
     df['ld1'].fillna(0, inplace=True)
 
-    df['dmp'] = pd.rolling_sum(df['hd1'], n)
-    df['dmm'] = pd.rolling_sum(df['ld1'], n)
+    df['dmp'] = df['hd1'].rolling(window=n, center=False).sum()
+    df['dmm'] = df['ld1'].rolling(window=n, center=False).sum()
 
     df['pdi'] = df['dmp'] / df['tr'] * 100  # pdi(+DI)为一段时间内hd的和/真实涨跌的和
     df['mdi'] = df['dmm'] / df['tr'] * 100
@@ -176,7 +176,28 @@ def adx(stock_data, n=14, ph='high', pl='low', pc='close'):
     return df
 
 
+# 计算布林指标,含信号
+def bolling(stock_data, m=26, n=2, ph='high', pl='low', pc='close'):
 
+    df = stock_data.copy()
+
+    # 计算布林带的中轨线、上轨线和下轨线
+    df['tp'] = (df[ph] + df[pl] + df[pc]) / 3
+
+    df['middle'] = df['tp'].rolling(window=m).mean()
+    df['sd'] = df['tp'].rolling(window=m).std()
+
+    df['upper'] = df['middle'] + n * df['sd']
+    df['lower'] = df['middle'] - n * df['sd']
+
+    df.dropna(inplace=True)
+
+    # 当收盘价上穿上轨线，买入，信号为1
+    df.ix[df[pc] > df['upper'], 'signal'] = 1
+    # 当收盘价下穿下轨线，卖空，信号为0
+    df.ix[df[pc] < df['lower'], 'signal'] = 0
+
+    return df
 
 
 

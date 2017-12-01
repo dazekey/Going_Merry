@@ -1,9 +1,14 @@
 # -*- encoding: utf-8 -*-
 
 """
+@author: Ken
+@file: momentum_emv_test_for_all_stock.py
+@time: 2017/11/30 11:35
+
 计算所有股票在观察期内，使用EMV指标不同参数的情况下的收益情况，计算各类参数下收益率排名前5%的股票的平均收益率，
 取平均收益最高的那组的参数作为下个策略使用期EMV指标使用的参数，进而计算以上策略下的综合收益，与index作为benchmark的收益率进行比较。
 """
+
 from __future__ import division
 import os
 import warnings
@@ -18,24 +23,19 @@ from Performance_analysis import equity_cal
 import matplotlib.pyplot as plt
 import time
 
-warnings.filterwarnings("ignore")
+# warnings.filterwarnings("ignore")
 pd.set_option('expand_frame_repr', False)
 # # df_stock = pd.read_hdf('d:/all_trading_data/data/output_data/momentum_emv_allstock_data.h5', key='all_stock')
 df_stock = pd.read_hdf('d:/all_trading_data/data/output_data/momentum_emv_allstock_data_updated.h5', key='all_stock')
 
 
 def momentum_and_emv(all_stock, start_date='2004-12-31', end_date='2017-9-30', window=3):
-    index_data = pd.read_csv('d:/all_trading_data/data/input_data/index_data_wande/000001.SH.CSV', parse_dates=True, encoding='gbk')
-    index_data.columns = [i.encode('utf8') for i in index_data.columns]
-    index_data.rename(columns={'代码': 'code', '日期': 'date', '涨跌幅(%)': 'change', '收盘价': 'close'}, inplace=True)
-    index_data['change'] = index_data['change'] / 100
-    index_data['date'] = pd.to_datetime(index_data['date'])
+    index_data = Functions.import_index_data_wande(index_code='000001.SH')
     index_data.set_index('date', inplace=True)
-
     index_data.sort_index(inplace=True)
     index_data = index_data[start_date:end_date]
     # 转换成月度数据
-    by_month = index_data[['close']].resample('M').last()
+    by_month = index_data[['index_close']].resample('M').last()
     by_month.reset_index(inplace=True)
 
     momentum_portfolio_all = pd.DataFrame()
@@ -58,8 +58,6 @@ def momentum_and_emv(all_stock, start_date='2004-12-31', end_date='2017-9-30', w
                 # 取排序后前5%的股票构造反转策略的组合，后5%的股票构造动量策略的组合
                 num = floor(len(grouped) * 0.05)
                 momentum_code_list = grouped.index[-num:]  # 动量组合的股票代码列表
-
-
                 grouped = grouped[grouped.index.isin(momentum_code_list)]
                 # print grouped.mean().index
                 EMV_data['EMV_' + str(p) + '_' + str(q)] = grouped.mean()
@@ -118,7 +116,6 @@ def sharp_ratio(df, rf=0.0284):
     volatility = df['rtn'].std() * sqrt(250)
     # 计算夏普比率
     sharpe = (annual_stock - rf) / volatility
-    print 'Sharp raio: %f' % sharpe
     return sharpe
 
 
@@ -134,38 +131,26 @@ sharp_ratio(me)
 
 
 # 同期大盘的相关指标
-index_data = pd.read_csv('d:/all_trading_data/data/input_data/index_data_wande/000001.SH.CSV', parse_dates=True, encoding='gbk')
-index_data.columns = [i.encode('utf8') for i in index_data.columns]
-
-index_data.rename(columns={'代码': 'code', '日期': 'date', '涨跌幅(%)': 'change', '收盘价': 'close'}, inplace=True)
-index_data['date'] = pd.to_datetime(index_data['date'])
-index_data['change'] = index_data['change'] / 100
-index_data.sort_values(by='date', inplace=True)
-index_data['equity'] = (1.0+index_data['change']).cumprod()
-index_data['pf_rtn'] = index_data['change']
-index_data = index_data[index_data['date'].isin(date_line)]
-index_data.reset_index(inplace=True)
-
-capital_line = list(index_data['close'])
-return_line = list(index_data['change'])
+index = Functions.import_index_data_wande(index_code='000001.SH')
+index.sort_values(by='date', inplace=True)
+index['equity'] = (1.0+index['index_change']).cumprod()
+index['pf_rtn'] = index['index_change']
+index = index[(index['date'] >= pd.to_datetime('2005-04-30')) & (index['date'] <= pd.to_datetime('2017-09-30'))]
+index.reset_index(inplace=True)
+capital_line = list(index['index_close'])
+return_line = list(index['index_change'])
 print '\n=====================同期上证指数主要回测指标====================='
-pf_analysis.annual_return(index_data)
-pf_analysis.max_drawdown(index_data)
-sharp_ratio(index_data)
-
+pf_analysis.annual_return(index)
+pf_analysis.max_drawdown(index)
+sharp_ratio(index)
 
 plt.figure(figsize=(14, 7))
 me.set_index('date', inplace=True)
-index_data['cum_rtn'] = (index_data['change'] + 1).cumprod() - 1
-index_data.set_index('date', inplace=True)
+index['cum_rtn'] = (index['index_change'] + 1).cumprod()
+index.set_index('date', inplace=True)
 
-index_data.to_csv('index_Data.csv')
-me.to_csv('me.csv')
-# exit()
-# (me['equity'] - 1).plot()
-# index_data['cum_rtn'].plot()
-plt.plot(index_data['cum_rtn'], label='index')
-plt.plot((me['equity'] - 1), label='momentum_emv')
-plt.title('Cumulative Return')
+plt.plot(index['cum_rtn'], label='index')
+plt.plot(me['equity'], label='momentum_emv')
+plt.title('Equity Curve')
 plt.legend(loc='best')
 plt.show()

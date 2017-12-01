@@ -3,7 +3,7 @@
 """
 @author: Ken
 @file: ma_test_for_allstock.py
-@time: 2017/11/28 15:22
+@time: 2017/11/30 11:35
 
 ma_short大于ma_long时，买入，信号为1；当ma_short小于ma_long时，卖出，信号为0
 计算所有股票使用此策略在不同参数下的年化收益率，sharpe ratio, max drawdown
@@ -57,7 +57,7 @@ stock_code_list = Functions.get_stock_code_list_in_one_dir_wande(input_data_path
 
 # ====数据准备
 program_start_time = time.time()
-for code in stock_code_list[0:]:    # 可以适当少选一点股票
+for code in stock_code_list[0:1]:    # 可以适当少选一点股票
     stock_data = Functions.import_stock_data_wande(code)
     start_time = time.time()
     if len(stock_data) < 250:    # 剔除发行时间小于约1年的数据
@@ -88,8 +88,8 @@ for code in stock_code_list[0:]:    # 可以适当少选一点股票
         df['capital'] = df['equity']
 
         df_stock = stock_data.copy()
-        stock_data = stock_data[stock_data['date'] >= pd.to_datetime('2005-01-01')]
-        stock_data.reset_index(inplace=True, drop=True)
+        df_stock = df_stock[df_stock['date'] >= pd.to_datetime('2005-01-01')]    # 与策略开始时间一致
+        df_stock.reset_index(inplace=True, drop=True)
         # 股票的年化收益
         rng_stock = pd.period_range(df_stock['date'].iloc[0], df_stock['date'].iloc[-1], freq='D')
         stock_rtn = pow(df_stock.ix[len(df_stock.index) - 1, 'close_adjust_back'] / df_stock.ix[0, 'close_adjust_back'],
@@ -135,11 +135,11 @@ for code in stock_code_list[0:]:    # 可以适当少选一点股票
     cost_time =end_time - start_time
     print 'cost time: ' + str(cost_time)
 
-    # print re
+    print re
 # exit()
 # re.sort_values(by='excessive_rtn', ascending=False, inplace=True)
 
-    re.iloc[0:1, :].to_csv('d:/all_trading_data/data/output_data/ma_test_for_allstock_20171128.csv', header=None, mode='a', index=False)
+    # re.iloc[0:1, :].to_csv('d:/all_trading_data/data/output_data/ma_test_for_allstock_20171128.csv', header=None, mode='a', index=False)
 
 program_end_time = time.time()
 program_cost_time = program_end_time - program_start_time

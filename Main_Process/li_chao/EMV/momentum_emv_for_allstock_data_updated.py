@@ -1,7 +1,12 @@
 # encoding: utf-8
 
 """
+@author: Ken
+@file: momentum_emv_for_allstock_data_updated.py
+@time: 2017/11/30 11:35
+
 为momentum emv strategy 准备全量股票数据
+将各类EMV参数下个股的日收益率数据转化为月收益率，拼接到一张表里
 
 """
 
@@ -13,7 +18,7 @@ from Strategy_test import TA_strategy
 from Performance_analysis import pf_analysis
 from Performance_analysis import equity_cal
 
-warnings.filterwarnings("ignore")
+# warnings.filterwarnings("ignore")
 pd.set_option('expand_frame_repr', False)
 
 # 导入指数数据,作为benchmark

@@ -33,11 +33,6 @@ df_stock = pd.read_hdf('d:/all_trading_data/data/output_data/momentum_ma_for_all
 def momentum_and_ma(all_stock, start_date='2004-12-31', end_date='2017-9-30', window=3):
 
     index_data = Functions.import_index_data_wande(index_code='000001.SH')
-    # index_data = pd.read_csv('d:/all_trading_data/data/input_data/index_data_wande/000001.SH.CSV', parse_dates=True, encoding='gbk')
-    # index_data.columns = [i.encode('utf8') for i in index_data.columns]
-    # index_data.rename(columns={'代码': 'code', '日期': 'date', '涨跌幅(%)': 'change', '收盘价': 'close'}, inplace=True)
-    # index_data['change'] = index_data['change'] / 100
-    # index_data['date'] = pd.to_datetime(index_data['date'])
     index_data.set_index('date', inplace=True)
     index_data.sort_index(inplace=True)
     index_data = index_data[start_date:end_date]
@@ -127,15 +122,15 @@ def sharp_ratio(df, rf=0.0284):
     return sharpe
 
 
-me = momentum_and_ma(df_stock, '2004-12-31', '2017-09-30', window=3)
-print me
-date_line = list(me['date'])
-capital_line = list(me['equity'])
-return_line = list(me['pf_rtn'])
+mm = momentum_and_ma(df_stock, '2004-12-31', '2017-09-30', window=3)
+print mm
+date_line = list(mm['date'])
+capital_line = list(mm['equity'])
+return_line = list(mm['pf_rtn'])
 print '\n=====================MA动量策略主要回测指标====================='
-pf_analysis.annual_return(me)
-pf_analysis.max_drawdown(me)
-sharp_ratio(me)
+pf_analysis.annual_return(mm)
+pf_analysis.max_drawdown(mm)
+sharp_ratio(mm)
 
 
 # 同期大盘的相关指标
@@ -154,11 +149,11 @@ sharp_ratio(index)
 
 # 作图
 plt.figure(figsize=(14, 7))
-me.set_index('date', inplace=True)
+mm.set_index('date', inplace=True)
 index['cum_rtn'] = (index['index_change'] + 1).cumprod()
 index.set_index('date', inplace=True)
 
-plt.plot(me['equity'], label='momentum_ma_equity')
+plt.plot(mm['equity'], label='momentum_ma_equity')
 plt.plot(index['cum_rtn'], label='index')
 plt.legend(loc='best')
 plt.show()
