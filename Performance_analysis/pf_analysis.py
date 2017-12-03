@@ -1,13 +1,45 @@
-
 # encoding: utf-8
 """
 @author: Ocean_Lane
 @contract: dazekey@163.com
-@file: pf_analysis.py
-@time: 2017/10/3 11:55
+@file: pf_analysis_v3.py
+@time: 2017/12/3 14:25
 """
+
 from __future__ import division  # 不引入这个的话，除法结果小于1的都是0
 """
+V3 更新
+1. annual_return(df, columns='equity') 计算年化收益的函数,对有'date', 'equity'列的df，计算获得annual return
+    -- 增加参数 columns用于指定列进行运算
+2. max_drawdown(df, columns='equity') 计算最大回撤函数,对有'date', 'equity'列的df，计算获得[max_dd, start_date, end_date]
+    -- 增加参数 columns用于指定列进行运算
+3. ultimate_index(df, columns='equity') 邢大说的一个终极指标：年化收益 / abs(最大回撤)
+3. average_change(df, type=0, change='change', pos='pos') 计算平均涨幅,对有'date', 'equity'列的df，计算获得ave
+    -- 增加参数change和pos, 可以指定列
+4. prob_up(df, type=0, change='change', pos='pos') # 计算上涨概率,对有'date', 'equity'列的df，计算获得p_up
+    -- 增加参数change和pos, 可以指定列
+5. max_successive_up(df, type=0, change='change', pos='pos') 计算最大连续上涨天数和最大连续下跌天数
+    -- 增加参数change和pos, 可以指定列
+6. max_period_return(df, pos='pos', change='change') 计算最大单周期涨幅和最大单周期跌幅
+    -- 增加参数change和pos, 可以指定列
+7. volatility(df, type=0, pos='pos', change='change') 计算收益波动率的函数
+    -- 增加参数type,change和pos, 可以指定列和是否使用pos计算收益
+8. beta(df, type=0, pos='pos', change='change', index_change='index_change') 计算beta的函数
+    -- 增加参数type, change, index_change和pos, 可以指定列和是否使用pos计算收益
+9. alpha(df, rf=0.0284, equity='equity', index_close='index_close',index_change='index_change') 计算alpha的函数
+    -- 增加参数equity, index_close, index_change
+10. sharp_ratio(df, equity='equity', change='change', pos='pos') 计算夏普比率
+    -- 增加参数equity, change, pos
+11. info_ratio(df, index_change='index_change', change='change', pos='pos') 计算信息比率
+12. plot_cumulative_return(df, nat_rtn=True, index=True, equity='equity', nat_equity='nat_equity', change='change', pos='pos', index_change='index_change')
+    
+
+==================
+v2 更新
+1. max_drawdown增加参数 columns用于指定列进行运算
+2. annual_return增加参数 columns用于指定列进行运算
+
+=====================
 1. annual_return(df) 计算年化收益的函数,对有'date', 'equity'列的df，计算获得annual return
 2. max_drawdown(df) 计算最大回撤函数,对有'date', 'equity'列的df，计算获得[max_dd, start_date, end_date]
 3. average_change(df) 计算平均涨幅,对有'date', 'equity'列的df，计算获得ave
@@ -25,7 +57,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # 计算年化收益的函数
-def annual_return(df):
+def annual_return(df, columns='equity'):
     """
     对有'date', 'equity'列的df，计算获得annual return
     :param df:  有'date', 'equity'列的df
@@ -35,14 +67,14 @@ def annual_return(df):
     rng = pd.period_range(df['date'].iloc[0], df['date'].iloc[-1], freq='D')
     # 计算年化收益率
 
-    annual = pow(df.ix[len(df.index)-1, 'equity'] / df.ix[0, 'equity'], 250.00 / len(rng)) -1
+    annual = pow(df.ix[len(df.index)-1, columns] / df.ix[0, columns], 250.00 / len(rng)) -1
     # annual = pow(df.iloc[-1, 'equity'] / df.ix[0, 'equity'], 250.00 / len(rng)) -1
     # pow 指数化运算
     print '年化收益率为： %f' % annual
     return annual
 
 # 计算最大回撤函数
-def max_drawdown(df):
+def max_drawdown(df, columns='equity'):
     """
     对有'date', 'equity'列的df，计算获得[max_dd, start_date, end_date]
     :param df: 有'date', 'equity'列的df
@@ -51,8 +83,8 @@ def max_drawdown(df):
 
     df = df.copy()
     # df['max2here'] = pd.expanding_max(df['equity'])  # 计算当日之前的账户最大价值，旧的写法 被弃用
-    df['max2here'] = df['equity'].expanding(min_periods=1).max()  # 计算当日之前的账户最大价值
-    df['dd2here'] = df['equity'] / df['max2here'] - 1  # 计算当日的回撤
+    df['max2here'] = df[columns].expanding(min_periods=1).max()  # 计算当日之前的账户最大价值
+    df['dd2here'] = df[columns] / df['max2here'] - 1  # 计算当日的回撤
 
     # 计算最大回撤和结束时间
     temp = df.sort_values(by='dd2here').iloc[0][['date', 'dd2here']]
@@ -61,7 +93,7 @@ def max_drawdown(df):
 
     # 计算开始时间
     df = df[df['date'] <= end_date]
-    start_date = df.sort_values(by='equity', ascending=False).iloc[0]['date']
+    start_date = df.sort_values(by=columns, ascending=False).iloc[0]['date']
 
     print '最大回撤为：%f, 开始日期：%s, 结束日期：%s' % (max_dd, start_date, end_date)
     return [max_dd, start_date, end_date]
@@ -82,7 +114,7 @@ def ultimate_index(df):
     return ultimate_index
 
 # 计算平均涨幅
-def average_change(df, type=0):
+def average_change(df, type=0, change='change', pos='pos'):
     """
     对有'date', 'equity'列的df，计算获得ave
     :param df: 有'date', 'equity'列的df
@@ -90,11 +122,11 @@ def average_change(df, type=0):
     :return:  ave
     """
     df = df.copy()
-    # type: 0 计算策略的上涨概率，1 计算自然的上涨概率
+    # type 0 计算策略的上涨概率,1 计算自然的上涨概率
     if type == 0:
-        df['rtn'] = df['change'] * df['pos']
+        df['rtn'] = df[change] * df[pos]
     elif type == 1:
-        df['rtn'] = df['change']
+        df['rtn'] = df[change]
 
     ave = df['rtn'].mean()
 
@@ -102,7 +134,7 @@ def average_change(df, type=0):
     return ave
 
 # 计算上涨概率
-def prob_up(df, type=0):
+def prob_up(df, type=0, change='change', pos='pos'):
     """
     对有'date', 'equity'列的df，计算获得p_up
     :param df: 有'date', 'equity'列的df
@@ -110,11 +142,11 @@ def prob_up(df, type=0):
     :return:  ave
     """
     df = df.copy()
-    # type: 0 计算策略的上涨概率，1 计算自然的上涨概率
+    # type 0 计算策略的上涨概率，1 计算自然的上涨概率
     if type == 0:
-        df['rtn'] = df['change'] * df['pos']
+        df['rtn'] = df[change] * df[pos]
     elif type == 1:
-        df['rtn'] = df['change']
+        df['rtn'] = df[change]
 
     df.ix[df['rtn'] > 0, 'rtn'] = 1  # 收益率大于0的记为1
     df.ix[df['rtn'] <= 0, 'rtn'] = 0  # 收益率小于等于0的记为0
@@ -126,7 +158,7 @@ def prob_up(df, type=0):
     return p_up
 
 # 计算最大连续上涨天数和最大连续下跌天数
-def max_successive_up(df, type=0):
+def max_successive_up(df, type=0, change='change', pos='pos'):
     """
     对有'date', 'pos'列的df，计算获得'rtn''up
     :param df:  有'date', 'pos'列的df
@@ -136,21 +168,21 @@ def max_successive_up(df, type=0):
     df = df.copy()
     # type: 0 计算策略的上涨概率，1 计算自然的上涨概率
     if type == 0:
-        df['rtn'] = df['change'] * df['pos']
+        df['rtn'] = df[change] * df[pos]
 
     elif type == 1:
-        df['rtn'] = df['change']
+        df['rtn'] = df[change]
 
     # print df
     # 新建一个全为空值的series,并作为dataframe新的一列
     s = pd.Series(np.nan, index=df.index)
     s.name = 'up'
-    df = pd.concat([df[['pos', 'date', 'rtn']], s], axis=1)
+    df = pd.concat([df[[pos, 'date', 'rtn']], s], axis=1)
     # 当收益率大于0时，up取1，小于0时，up取0，等于0时采用前向差值
     df.ix[df['rtn'] > 0, 'up'] = 1
     df.ix[df['rtn'] < 0, 'up'] = -1
     if type == 0:
-        df.ix[df['pos'] == 0, 'up'] = 0
+        df.ix[df[pos] == 0, 'up'] = 0
 
     # df.ix[df['rtn'] == 0, 'up'] = 0
     df['up'].fillna(method='ffill', inplace=True)
@@ -182,7 +214,7 @@ def max_successive_up(df, type=0):
     return [max_successive_up, max_successive_down]
 
 # 计算最大单周期涨幅和最大单周期跌幅
-def max_period_return(df):
+def max_period_return(df, pos='pos', change='change'):
     """
 
     :param df: 有'pos'列的df
@@ -192,7 +224,7 @@ def max_period_return(df):
 
     for i in range(1, df.shape[0]):
         if df.loc[i, 'pos'] == 1:
-            df.loc[i, 'rtn'] = (df.loc[i, 'change'] + 1) * df.loc[i -1, 'rtn']
+            df.loc[i, 'rtn'] = (df.loc[i, change] + 1) * df.loc[i -1, 'rtn']
         else:
             df.loc[i, 'rtn'] = 1
 
@@ -205,7 +237,7 @@ def max_period_return(df):
     return [max_return, min_return]
 
 # 计算收益波动率的函数
-def volatility(df):
+def volatility(df, type=0, pos='pos', change='change'):
     """
 
     :param df:
@@ -213,7 +245,10 @@ def volatility(df):
     """
 
     from math import sqrt
-    df['rtn'] = df['change'] * df['pos']
+    if type == 0:
+        df['rtn'] = df[change] * df[pos]
+    elif type == 1:
+        df['rtn'] = df[change]
     # 计算收益率
     vol = df['rtn'].std() * sqrt(250)
     """sqrt开方, numpy.std()计算方差"""
@@ -221,7 +256,7 @@ def volatility(df):
     return vol
 
 # 计算beta的函数
-def beta(df, type=0):
+def beta(df, type=0, pos='pos', change='change', index_change='index_change'):
     """
 
     :param df: 有index_change列的df
@@ -230,18 +265,18 @@ def beta(df, type=0):
     df = df.copy()
     # type: 0 计算策略的收益率，1 计算自然的收益率
     if type == 0:
-        df['rtn'] = df['change'] * df['pos']
+        df['rtn'] = df[change] * df[pos]
         # df['benchmark_rtn'] = df['index_change'] * df['pos']
     elif type == 1:
-        df['rtn'] = df['change']
-    df['benchmark_rtn'] = df['index_change']
+        df['rtn'] = df[change]
+    df['benchmark_rtn'] = df[index_change]
     # 账户收益率和基准收益率的协方差除以基准收益率的方差
     beta = df['rtn'].cov(df['benchmark_rtn'])/df['benchmark_rtn'].var()
     print 'beta: %f' % beta
     return beta
 
 # 计算alpha的函数
-def alpha(df, rf=0.0284):
+def alpha(df, rf=0.0284, equity='equity', index_close='index_close',index_change='index_change'):
     """
 
     :param df: 有'date', 'equity', 'index_close, 'rtn', 'index_change'
@@ -254,15 +289,15 @@ def alpha(df, rf=0.0284):
     rng = pd.period_range(df['date'].iloc[0], df['date'].iloc[-1], freq='D')
     # rf = 0.0284  # 无风险利率取10年期国债的到期年化收益率
 
-    annual_stock = pow(df.ix[len(df.index) - 1,'equity'] / df.ix[0,'equity'], 250 / len(rng)) - 1 #账户年化收益率
-    annual_index = pow(df.ix[len(df.index) - 1, 'index_close'] / df.ix[0, 'index_close'], 250 / len(rng)) -1 #基准年化收益
+    annual_stock = pow(df.ix[len(df.index) - 1, equity] / df.ix[0, equity], 250 / len(rng)) - 1 #账户年化收益率
+    annual_index = pow(df.ix[len(df.index) - 1, index_close] / df.ix[0, index_close], 250 / len(rng)) -1 #基准年化收益
 
-    beta = df['rtn'].cov(df['index_change']) / df['index_change'].var()
+    beta = df['rtn'].cov(df[index_change]) / df[index_change].var()
     a = (annual_stock - rf) - beta * (annual_index - rf)  # alpha的计算公式
     print 'alpha: %f' % a
     return a
 
-def sharp_ratio(df, rf = 0.0284):
+def sharp_ratio(df, rf = 0.0284, equity='equity', change='change', pos='pos'):
     """
 
     :param df: 'date', 'equity', 'change'
@@ -276,9 +311,9 @@ def sharp_ratio(df, rf = 0.0284):
     rng = pd.period_range(df['date'].iloc[0], df['date'].iloc[-1], freq='D')
 
     # 账户年化收益率
-    annual_stock = pow(df.ix[len(df.index) - 1, 'equity'] / df.ix[0, 'equity'], 250/len(rng)) - 1
+    annual_stock = pow(df.ix[len(df.index) - 1, equity] / df.ix[0, equity], 250/len(rng)) - 1
     # 计算收益波动率
-    df['rtn'] = df['pos'] * df['change']
+    df['rtn'] = df[pos] * df[change]
     volatility = df['rtn'].std() * sqrt(250)
     # 计算夏普比率
     sharpe = (annual_stock - rf) / volatility
@@ -286,7 +321,7 @@ def sharp_ratio(df, rf = 0.0284):
     return sharpe
 
 # 计算信息比率
-def info_ratio(df):
+def info_ratio(df, index_change='index_change', change='change', pos='pos'):
     """
 
     :param df: 'date', 'index_change', 'change'
@@ -294,8 +329,8 @@ def info_ratio(df):
     """
     from math import sqrt
     df = df.copy()
-    df['rtn'] = df['pos'] * df['change']
-    df['diff'] = df['rtn'] - df['index_change']
+    df['rtn'] = df[pos] * df[change]
+    df['diff'] = df['rtn'] - df[index_change]
     annual_mean = df['diff'].mean()*250
     annual_std = df['diff'].std() * sqrt(250)
     info = annual_mean / annual_std
@@ -303,18 +338,18 @@ def info_ratio(df):
     return info
 
 # 计算股票和基准在回测期间的累积收益率并画图
-def plot_cumulative_return(df, nat_rtn=True, index=True):
+def plot_cumulative_return(df, nat_rtn=True, index=True, equity='equity', nat_equity='nat_equity', change='change', pos='pos', index_change='index_change'):
     """
 
     :param date_line: 'date', 'index_change', 'change'
     :return: 画出股票和基准在回测期间的累计收益率的折线图
     """
     df = df.copy()
-    df['rtn'] = df['change'] * df['pos']
+    df['rtn'] = df[change] * df[pos]
     df['stock_cumret']= (df['rtn'] + 1).cumprod()
     """cumprod -- cumulative prod"""
     # df['benchmark_cumret'] = (df['index_change'] + 1).cumprod() * 1000000
-    df['benchmark_cumret'] = (df['index_change'] + 1).cumprod()
+    df['benchmark_cumret'] = (df[index_change] + 1).cumprod()
     # 设置日期为Index,x轴才能显示日期
     df.set_index('date', inplace=True)
     # 画出股票和基准在回测期间的累计收益率的折线图
@@ -323,13 +358,12 @@ def plot_cumulative_return(df, nat_rtn=True, index=True):
     ax.set_xlabel('Time')  # 设置横坐标x轴的名字
     ax.set_ylabel('Return')  # 设置Y轴
     # df['stock_cumret'].plot(style='r-', figsize=(12,5), label='stock_return')
-    plt.plot(df['equity'], label='stock_return')
+    plt.plot(df[equity], label='stock_return')
     # df['benchmark_cumret'].plot(style='k--', figsize=(12,5), label='benchmark_return')
     if index==True:
         plt.plot(df['benchmark_cumret'], label='benchmark_return')
     if nat_rtn==True:
-        plt.plot(df['nat_equity'], label='nat_rtn')
+        plt.plot(df[nat_equity], label='nat_rtn')
     # df.to_csv('df.csv',index=False)
     plt.legend(loc='best')
     plt.show()
-
