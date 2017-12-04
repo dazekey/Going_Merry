@@ -111,7 +111,7 @@ def emv(stock_data, n=14, m=9, ph='high', pl='low', vol='volume'):    # 查了�
     # 计算每天的em值
     df['em'] = ((df[ph] + df[pl]) / 2 - (df[ph].shift(1) + df[pl].shift(1)) / 2) * \
                (df[ph] - df[pl]) / df[vol]
-    # df.dropna(inplace=True)
+    df.dropna(inplace=True)
 
     # emv等于em的n日简单移动平均
     # df['emv'] = pd.rolling_mean(df['em'], n)
@@ -120,7 +120,7 @@ def emv(stock_data, n=14, m=9, ph='high', pl='low', vol='volume'):    # 查了�
     # maemv等于emv的m日简单移动平均
     # df['maemv'] = pd.rolling_mean(df['emv'], m)
     df['maemv'] = df['emv'].rolling(m).mean()
-    # df.dropna(inplace=True)
+    df.dropna(inplace=True)
 
     return df
 
@@ -175,26 +175,6 @@ def adx(stock_data, n=14, ph='high', pl='low', pc='close'):
 
     return df
 
-# 布林指标
-def bollinger_band(stock_data, n=14, ph='high', pl='low', pc='close'):
-    df = stock_data.copy()
-
-    # 计算布林带的中轨线、上轨线和下轨线
-    df['tp'] = (df[ph] + df[pl] + df[pc]) / 3
-
-    # df['middle'] = pd.rolling_mean(df['tp'], n)
-    df['middle'] = df['tp'].rolling(n).mean()
-
-    # df['sd_0'] = pd.rolling_std(df['tp'], n)
-    df['sd'] = df['tp'].rolling(n).std()
-    # df[['sd','sd_0']].to_csv('test_bolling.csv')
-
-    df['up'] = df['middle'] + 2 * df['sd']
-    df['down'] = df['middle'] - 2 * df['sd']
-
-    df.dropna(inplace=True)
-    df.reset_indx(drop=True, inplace=True)
-    return df
 
 
 
